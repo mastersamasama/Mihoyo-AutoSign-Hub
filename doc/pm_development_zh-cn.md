@@ -98,7 +98,7 @@ plugins: [
 // ./plugin.js
 export const checkin = async (config) => {
 	console.log(config)
-    return config.users.cookies;
+    return config.users[0].cookies;
 };
 ```
 
@@ -256,12 +256,7 @@ post ctx {
   support: "Global/CN"
 },
   timestamp: 1717027200000,
-  result: {
-    users: [
-      { cookies: 'Cookie modified by preCheckin' }
-    ],
-    lang: 'zh-cn'
-  }
+  result: 'Cookie modified by preCheckin'
 }
 ```
 
