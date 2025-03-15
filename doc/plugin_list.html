@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plugin & Middleware Documentation</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <style>
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --accent-color: #2ecc71;
+        --code-bg: #f5f6fa;
+        --border-radius: 8px;
+      }
+
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        line-height: 1.6;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        color: var(--primary-color);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 3rem 0 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 3px solid var(--secondary-color);
+      }
+
+      .section-header i {
+        font-size: 1.5em;
+        color: var(--secondary-color);
+      }
+
+      .card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin: 1.5rem 0;
+        padding: 1.5rem;
+        border-left: 4px solid var(--accent-color);
+      }
+
+      .plugin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+
+      .badge {
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 500;
+      }
+
+      .badge-plugin {
+        background: #e8f4fc;
+        color: var(--secondary-color);
+        border: 1px solid var(--secondary-color);
+      }
+
+      .badge-middleware {
+        background: #e8fcf4;
+        color: var(--accent-color);
+        border: 1px solid var(--accent-color);
+      }
+
+      .badge-hook {
+        background: #f5f6fa;
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+      }
+
+      pre {
+        background: var(--code-bg);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        overflow-x: auto;
+        margin: 1rem 0;
+      }
+
+      code {
+        font-family: "Fira Code", monospace;
+        font-size: 0.9em;
+      }
+
+      details {
+        margin: 1rem 0;
+        border-radius: var(--border-radius);
+        border: 1px solid #ddd;
+      }
+
+      summary {
+        padding: 1rem;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .compatibility-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+      }
+
+      a {
+        color: var(--secondary-color);
+        text-decoration: none;
+        transition: color 0.3s ease;
+      }
+
+      a:hover {
+        color: #2980b9;
+      }
+
+      .config-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+      }
+
+      .config-table th,
+      .config-table td {
+        padding: 0.8rem;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+
+      .config-table th {
+        background-color: #f5f6fa;
+      }
+
+      .compatibility-item.warning {
+        color: #c67f00;
+        border-color: #ffc107;
+      }
+
+      .compatibility-item.error {
+        color: #dc3545;
+        border-color: #dc3545;
+      }
+    </style>
+    <div class="section-header">
+      <i class="fas fa-puzzle-piece"></i>
+      <h1>Plugin & Middleware Documentation</h1>
+    </div>
+
+    <!-- Plugins Section -->
+    <section>
+      <div class="section-header">
+        <i class="fas fa-plug"></i>
+        <h2>Available Plugins</h2>
+      </div>
+
+      <!-- Genshin Impact Plugin -->
+      <div class="card">
+        <div class="plugin-header">
+          <div>
+            <h3>Genshin Sign</h3>
+            <div style="margin-top: 0.5rem">
+              <span class="badge badge-plugin">Plugin</span>
+              <span class="badge">v0.0.0</span>
+              <span class="badge">Maintained</span>
+            </div>
+          </div>
+          <div style="text-align: right">
+            <small>Author: mastersamasama</small><br />
+            <small>Last updated: 2024-03-15</small>
+          </div>
+        </div>
+
+        <p class="description">
+          Automatically claim daily check-in rewards for
+          <a href="https://genshin.hoyoverse.com/" target="_blank"
+            >Genshin Impact</a
+          >. Supports multiple accounts and language configurations.
+        </p>
+
+        <details>
+          <summary>Configuration Guide</summary>
+          <div class="config-content">
+            <h4>Basic Configuration</h4>
+            <pre><code>{
+    name: 'genshin',
+    modulePath: "@official/genshin.js",
+    options: {
+        users: [{
+            cookies: 'YOUR_COOKIES_HERE'
+        }],
+        lang: 'zh-tw'
+    }
+}</code></pre>
+
+            <div class="alert">
+              <i class="fas fa-exclamation-triangle"></i>
+              <strong>Important:</strong> Never share your cookies with anyone!
+            </div>
+
+            <h4>Additional Resources</h4>
+            <ul>
+              <li>
+                <a
+                  href="https://github.com/mastersamasama/mihoyo-checkin/blob/master/doc/how_to_get_cookies.md"
+                >
+                  <i class="fas fa-link"></i> How to Get Cookies Guide
+                </a>
+              </li>
+            </ul>
+
+            <div class="compatibility-list">
+              <div class="compatibility-item">
+                <i class="fas fa-check-circle"></i>
+                Supported Regions: Global
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- Honkai: Star Rail Plugin -->
+    <section class="card">
+      <div class="plugin-header">
+        <div>
+          <h3>Star Rail Sign</h3>
+          <div style="margin-top: 0.5rem">
+            <span class="badge badge-plugin">Plugin</span>
+            <span class="badge">v0.0.1</span>
+            <span class="badge">Maintained</span>
+          </div>
+        </div>
+        <div style="text-align: right">
+          <small>Author: mastersamasama</small><br />
+          <small>Last updated: 2024-03-15</small>
+        </div>
+      </div>
+
+      <p class="description">
+        Automatically claim daily check-in rewards for
+        <a href="https://hsr.hoyoverse.com/" target="_blank"
+          >Honkai: Star Rail</a
+        >. Supports multiple accounts and server regions.
+      </p>
+
+      <details>
+        <summary>Configuration Guide</summary>
+        <div class="config-content">
+          <h4>Basic Configuration</h4>
+          <pre><code>{
+    name: 'starrail',
+    modulePath: "@official/starrail.js",
+    options: {
+        users: [{
+            cookies: 'YOUR_COOKIES_HERE',
+        }],
+        lang: 'zh-cn'
+    }
+}</code></pre>
+
+          <div class="alert">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Important:</strong> Never share your cookies with anyone!
+          </div>
+
+          <h4>Additional Resources</h4>
+          <ul>
+            <li>
+              <a
+                href="https://github.com/mastersamasama/mihoyo-checkin/blob/master/doc/how_to_get_cookies.md"
+              >
+                <i class="fas fa-link"></i> How to Get Cookies Guide
+              </a>
+            </li>
+          </ul>
+
+          <div class="compatibility-list">
+            <div class="compatibility-item">
+              <i class="fas fa-check-circle"></i>
+              Supported Regions: Global
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- Middleware Section -->
+    <section>
+      <div class="section-header">
+        <i class="fas fa-code-branch"></i>
+        <h2>Middleware Solutions</h2>
+      </div>
+
+      <!-- Discord Notify Middleware -->
+      <div class="card">
+        <div class="plugin-header">
+          <div>
+            <h3>Discord Notifications</h3>
+            <div style="margin-top: 0.5rem">
+              <span class="badge badge-middleware">Middleware</span>
+              <span class="badge badge-hook">postCheckin</span>
+              <span class="badge badge-hook">onError</span>
+            </div>
+          </div>
+          <div style="text-align: right">
+            <small>Author: mastersamasama</small><br />
+            <small>Last updated: 2024-03-18</small>
+          </div>
+        </div>
+
+        <p class="description">
+          Real-time notification system for check-in results through Discord
+          webhooks. Supports multi-language notifications and smart mention
+          features.
+        </p>
+
+        <details>
+          <summary>Configuration Guide</summary>
+          <div class="config-content">
+            <h4>Basic Configuration</h4>
+            <pre><code>{
+    name: "discord-notify",
+    modulePath: "@official/discord-notify.js",
+    target: ["*"],
+    options: {
+        webhook: "YOUR_WEBHOOK_URL",
+        language: "zh-tw",
+        tag_filter: [0],
+        mentionUsers: ["USER_ID"]
+    }
+}</code></pre>
+
+            <div class="alert">
+              <i class="fas fa-exclamation-triangle"></i>
+              <strong>Security Note:</strong> Always store webhook URLs in
+              environment variables
+            </div>
+
+            <h4>Configuration Options</h4>
+            <table class="config-table">
+              <thead>
+                <tr>
+                  <th>Option</th>
+                  <th>Description</th>
+                  <th>Default</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>webhook</td>
+                  <td>Discord webhook URL (required)</td>
+                  <td>-</td>
+                </tr>
+                <tr>
+                  <td>language</td>
+                  <td>
+                    Notification language, support 'en', 'zh-cn', 'zh-tw', 'ja',
+                    'ko'
+                  </td>
+                  <td>"en"</td>
+                </tr>
+                <tr>
+                  <td>tag_filter</td>
+                  <td>Status codes to mute notifications for</td>
+                  <td>[0]</td>
+                </tr>
+                <tr>
+                  <td>mentionUsers</td>
+                  <td>User IDs to mention on failure, @ that user</td>
+                  <td>[]</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h4>Status Code Reference</h4>
+            <div class="compatibility-list">
+              <div class="compatibility-item">
+                <i class="fas fa-check-circle"></i>
+                Success: 0
+              </div>
+              <div class="compatibility-item warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Already Checked In: -5003
+              </div>
+              <div class="compatibility-item error">
+                <i class="fas fa-times-circle"></i>
+                Cookie Expired: -100
+              </div>
+            </div>
+
+            <h4>Additional Resources</h4>
+            <ul>
+              <li>
+                <a
+                  href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks"
+                >
+                  <i class="fas fa-link"></i> Discord Webhook Guide
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://support.discord.com/hc/en-us/articles/4407571667351-How-to-Find-User-IDs-for-Law-Enforcement"
+                >
+                  <i class="fas fa-link"></i> Finding User IDs Guide
+                </a>
+              </li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <!-- Cookies Tidy Middleware -->
+      <div class="card">
+        <div class="plugin-header">
+          <div>
+            <h3>Cookies Formatter</h3>
+            <div style="margin-top: 0.5rem">
+              <span class="badge badge-middleware">Middleware</span>
+              <span class="badge badge-hook">preCheckin</span>
+            </div>
+          </div>
+          <div style="text-align: right">
+            <small>Author: mastersamasama</small><br />
+            <small>Last updated: 2024-03-18</small>
+          </div>
+        </div>
+
+        <p class="description">
+          Automatically processes and sanitizes cookies from browser copy-paste
+          format. Ensures proper cookie formatting before check-in execution.
+        </p>
+
+        <details>
+          <summary>Configuration Guide</summary>
+          <div class="config-content">
+            <h4>Basic Configuration</h4>
+            <pre><code>{
+    name: "cookies-tidy",
+    modulePath: "@official/cookies-tidy.js",
+    target: ["*"]
+}</code></pre>
+
+            <div class="alert">
+              <i class="fas fa-info-circle"></i>
+              <strong>Automatic Processing:</strong> No options required - works
+              automatically on raw cookie strings
+            </div>
+
+            <h4>Transformation Example</h4>
+            <div>
+              <div>Input: "ltoken=abc123; ltuid=123456; "</div>
+              <div>Output: "ltoken=abc123;ltuid=123456"</div>
+            </div>
+
+            <h4>Common Issues Handled</h4>
+            <ul>
+              <li>Extra spaces between cookies</li>
+              <li>Trailing semicolons</li>
+              <li>Inconsistent formatting from browser copy</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- Quick Navigation -->
+    <div style="margin-top: 3rem; text-align: center">
+      <a href="#plugins" class="nav-link">
+        <i class="fas fa-arrow-up"></i> Back to Top
+      </a>
+    </div>
+  </body>
+</html>
