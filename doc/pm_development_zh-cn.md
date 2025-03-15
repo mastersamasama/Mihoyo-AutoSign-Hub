@@ -302,7 +302,7 @@ export const meta = {
   author: "Github用户名",      // 如: mastersamasama
   date: "2023-03-15",        // 最后更新日期
   contact: "contact@domain", // 联系方式
-  description: "Plugin description"
+  description: "Plugin description",
   support: "CN;Global"  // 支持地区
 };
 ```

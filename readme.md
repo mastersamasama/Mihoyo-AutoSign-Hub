@@ -41,6 +41,13 @@
 
 1. Install [Node.js 18+](https://nodejs.org/)
 2. Create [Vercel Account](https://vercel.com/signup)
+3. Install [pnpm package manager](https://pnpm.io/installation)
+
+```shell
+npm install -g pnpm@latest-10
+```
+
+
 
 ### Deployment
 
@@ -51,6 +58,8 @@ cd Mihoyo-AutoSign-Hub
 
 # Install dependencies
 pnpm install
+
+#-------> Configure auto sign hub in /api/config.ts [See Configuration Guide]
 
 # Deploy to Vercel
 vercel deploy --prod
@@ -64,9 +73,12 @@ vercel dev
 
 ---
 
+<a id="-configuration-guide"></a>
 ## ⚙️ Configuration Guide
 
-### Core Configuration (config.ts)
+### Core Configuration ([config.ts](api/config.ts))
+
+Open `api/config.ts` in your editor
 
 ```typescript
 import { GlobalConfig } from './types/common.js';

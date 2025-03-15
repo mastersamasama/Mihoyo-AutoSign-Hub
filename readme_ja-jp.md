@@ -25,6 +25,7 @@
 
 ---
 
+<a id="特徴"></a>
 ## 🌟 特徴
 
 - **自動チェックイン** - 原神、崩壊：スターレイルなどmiHoYoゲーム対応
@@ -36,11 +37,19 @@
 
 ---
 
+<a id="クイックスタート"></a>
 ## 🚀 クイックスタート
 
 ### 環境準備
 1. [Node.js 18+](https://nodejs.org/) をインストール
 2. [Vercelアカウント](https://vercel.com/signup) を作成
+3. [pnpm ](https://pnpm.io/ja/installation) をインストール
+
+```shell
+ npm install -g pnpm@latest-10
+```
+
+
 
 ### デプロイ手順
 ```bash
@@ -50,6 +59,8 @@ cd Mihoyo-AutoSign-Hub
 
 # 依存関係をインストール
 pnpm install
+
+#-------> /api/config.ts を設定 [設定ガイド]を参照
 
 # Vercelにデプロイ
 vercel deploy --prod
@@ -63,9 +74,13 @@ vercel dev
 
 ---
 
+<a id="設定ガイド"></a>
 ## ⚙️ 設定ガイド
 
-### コア設定（config.ts）
+### コア設定（[config.ts](api/config.ts)）
+
+`api/config.ts` ファイルを開く
+
 ```typescript
 import { GlobalConfig } from './types/common.js';
 const myLanguage = 'ja-jp';
@@ -123,6 +138,7 @@ export const getConfig = (): GlobalConfig => ({
 
 ---
 
+<a id="プラグインエコシステム"></a>
 ## 🔌 プラグインエコシステム
 
 ### 公式プラグインリスト
@@ -167,6 +183,7 @@ export const getConfig = (): GlobalConfig => ({
 
 ---
 
+<a id="セキュリティ注意事項"></a>
 ## 🔒 セキュリティ注意事項
 
 1. **機密情報の保護**

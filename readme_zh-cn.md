@@ -25,6 +25,7 @@
 
 ---
 
+<a id="特性"></a>
 ## 🌟 特性
 
 - **自动化签到** - 支持原神、星穹铁道等米哈游全家桶游戏
@@ -36,11 +37,19 @@
 
 ---
 
+<a id="快速开始"></a>
 ## 🚀 快速开始
 
 ### 环境准备
 1. 安装 [Node.js 18+](https://nodejs.org/)
 2. 注册 [Vercel 账号](https://vercel.com/signup)
+3. 安装 [pnpm](https://pnpm.io/zh/installation)
+
+```shell
+npm install -g pnpm@latest-10
+```
+
+
 
 ### 部署步骤
 
@@ -51,6 +60,8 @@ cd Mihoyo-AutoSign-Hub
 
 # 安装依赖
 pnpm install
+
+#-------> 在 /api/config.ts 中进行配置 参见[配置指南]
 
 # 部署到Vercel
 vercel deploy --prod
@@ -66,9 +77,13 @@ vercel dev
 
 ---
 
+<a id="配置指南"></a>
 ## ⚙️ 配置指南
 
-### 核心配置（config.ts）
+### 核心配置（[config.ts](api/config.ts)）
+
+打开 `api/config.ts` 文件
+
 ```typescript
 import { GlobalConfig } from './types/common.js';
 const myLanguage = 'zh-cn';
@@ -134,6 +149,7 @@ export const getConfig = (): GlobalConfig => ({
 
 ---
 
+<a id="插件生态"></a>
 ## 🔌 插件生态
 
 ### 官方插件列表
@@ -184,7 +200,7 @@ export const getConfig = (): GlobalConfig => ({
 ---
 
 
-
+<a id="安全提示"></a>
 ## 🔒 安全提示
 
 1. **敏感信息保护**
