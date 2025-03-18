@@ -62,7 +62,7 @@ export const meta = {
   date: "2025-01-01",
   contact: "developer-contact",
   description: "Plugin functionality summary",
-  support: "Global/CN"
+  support: "Global;CN"
 };
 
 export const checkin = async (config) => {
@@ -100,7 +100,7 @@ Plugin Implementation
 ```typescript
 // ./plugin.js
 export const checkin = async (config) => {
-	console.log(config)
+    console.log(config)
     return config.users[0].cookies;
 };
 ```
@@ -313,7 +313,7 @@ export const meta = {
   date: "2023-03-15",           // Last update date (YYYY-MM-DD)
   contact: "contact@domain",    // Contact information
   description: "Plugin functionality description",
-  support: "CN;Global"          // Supported regions
+  support: "Global;CN"          // Supported regions
 };
 ```
 

@@ -21,7 +21,7 @@ export const getConfig = (): GlobalConfig => ({
         },
         {
             name: 'star rail',
-            modulePath: "./plugins/starrail.js",
+            modulePath: "@official/starrail.js",
             options: {
                 users: [
                     {
@@ -35,7 +35,7 @@ export const getConfig = (): GlobalConfig => ({
     middlewares: [
         {
             name: 'cookies-tidy',
-            modulePath: './middlewares/cookies-tidy.js',
+            modulePath: '@official/cookies-tidy.js',
         },
         {
             name: 'discord-notify',

@@ -29,8 +29,8 @@
 ## 🌟 特性
 
 - **自动化签到** - 支持原神、星穹铁道等米哈游全家桶游戏
-- **智能更新** - 自动获取最新插件（可切换为本地模式）
-- **多账号管理** - 支持同时管理多个游戏账号
+- **智能更新** - 自动获取最新插件（可切换为本地模式以停止自动更新）
+- **多账号管理** - 支持同时管理多个游戏账号，进行签到等
 - **插件化架构** - 开发者友好，轻松扩展新功能，欢迎各位开发者pr好用的插件 ([开发文档](doc/pm_development_zh-cn.md))
 - **即时通知** - 集成Discord/webhook通知系统
 - **云端部署** - 免费使用[Vercel Functions](https://vercel.com/docs/functions)的定时触发([Cron Jobs](https://vercel.com/docs/cron-jobs/quickstart))进行每日签到
