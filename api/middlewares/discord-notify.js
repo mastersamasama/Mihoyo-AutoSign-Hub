@@ -17,6 +17,7 @@ const i18n = {
       already_claimed: "Already claimed",
       cookie_expired: "Cookie expired",
       activity_ended: "Event has ended",
+      too_frequent: "Too frequent check-in",
     },
     info: {
       plugin_name: "**Name**: ${name}",
@@ -44,6 +45,7 @@ const i18n = {
       already_claimed: "重复签到",
       cookie_expired: "Cookie 失效",
       activity_ended: "活动已结束",
+      too_frequent: "签到过于频繁",
     },
     info: {
       plugin_name: "**插件名称**: ${name}",
@@ -71,6 +73,7 @@ const i18n = {
       already_claimed: "重複簽到",
       cookie_expired: "Cookie 失效",
       activity_ended: "活動已結束",
+      too_frequent: "簽到過於頻繁",
     },
     info: {
       plugin_name: "**插件名稱**: ${name}",
@@ -310,6 +313,8 @@ function getResultStatus(res, t) {
       return t("messages.already_claimed");
     case -100:
       return t("messages.cookie_expired");
+    case -1004:
+      return t("messages.too_frequent");
     case -500012:
       return t("messages.activity_ended");
     default:
