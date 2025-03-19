@@ -64,7 +64,7 @@ export const meta = {
   date: "2025-01-01",
   contact: "開発者連絡先",
   description: "プラグインの機能概要",
-  support: "Global;CN"
+  support: "os"
 };
 
 export const checkin = async (config) => {
@@ -308,6 +308,6 @@ export const meta = {
   date: "2023-03-15",
   contact: "contact@domain",
   description: "プラグインの機能概要",
-  support: "Global;CN"
+  support: "os;cn"
 };
 ```
