@@ -1,62 +1,109 @@
 export const meta = {
-  name: "Genshin Sign",
-  version: "0.0.1",
+  name: "genshin-sign",
+  version: "0.0.2",
   author: "mastersamasama",
-  date: "2025-03-02",
+  date: "2025-03-20",
   contact: "https://github.com/mastersamasama/mihoyo-checkin/issues",
+  description: "Help get Genshin Impact daily checkin rewards",
+  support: "os",
 };
 
-async function checkinHandler(cookies, lang = "en-us") {
-  const payload = {
-    act_id: "e202102251931481",
-  };
+const API_CONFIG = {
+  ACT_ID: "e202102251931481",
+  BASE_URL: "https://sg-hk4e-api.hoyolab.com/event/sol/sign",
+  DEFAULT_LANG: "en-us",
+  MAX_RETRY: 1,
+  RETRY_DELAY: 1000,
+};
 
-  const headers = {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-    Origin: "https://act.hoyolab.com",
-    Referer: "https://act.hoyolab.com/",
-    Accept: "application/json, text/plain, */*",
-    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-    Priority: "u=1, i",
-    "Sec-Ch-Ua":
-      '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
-    "Sec-Ch-Ua-Mobile": "?0",
-    "Sec-Ch-Ua-Platform": '"Windows"',
-    "Sec-Fetch-Dest": "empty",
-    "Content-Type": "application/json",
-    Cookie: cookies,
-  };
+const generateHeaders = (cookies) => ({
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+  Origin: "https://act.hoyolab.com",
+  Referer: "https://act.hoyolab.com/",
+  Accept: "application/json, text/plain, */*",
+  "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+  Priority: "u=1, i",
+  "Sec-Ch-Ua":
+    '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
+  "Sec-Ch-Ua-Mobile": "?0",
+  "Sec-Ch-Ua-Platform": '"Windows"',
+  "Sec-Fetch-Dest": "empty",
+  "Content-Type": "application/json",
+  Cookie: cookies,
+});
 
-  try {
-    const response = await fetch(
-      `https://sg-hk4e-api.hoyolab.com/event/sol/sign?lang=${lang}`,
-      {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(payload),
-        credentials: "include",
-      }
-    );
+const generatePayload = () => ({
+  act_id: API_CONFIG.ACT_ID,
+});
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+async function fetchWithRetry(url, options, retries = API_CONFIG.MAX_RETRY) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY * (i + 1)));
     }
+  }
+}
 
-    const result = await response.json();
+function validateUserInput(user) {
+  if (!user?.cookies?.trim()) {
+    throw new Error("Invalid cookies provided");
+  }
+}
+
+async function checkinHandler(cookies, lang = API_CONFIG.DEFAULT_LANG) {
+  try {
+    const url = new URL(API_CONFIG.BASE_URL);
+    url.searchParams.append("lang", lang);
+
+    const result = await fetchWithRetry(url.toString(), {
+      method: "POST",
+      headers: generateHeaders(cookies),
+      body: JSON.stringify(generatePayload()),
+      credentials: "include",
+    });
+
     return result;
   } catch (error) {
-    console.error("API Request Failed:", error);
-    throw error;
+    console.error(`Checkin failed: ${error.message}`);
+    return { 
+      success: false, 
+      error: {
+        message: error.message,
+        stack: error.stack
+      }
+    };
   }
 }
 
 export const checkin = async (config) => {
-  let result = [];
-  for (let user of config.users) {
-    let response = await checkinHandler(user.cookies, config.lang || 'en-us');
-    result.push(response);
+  if (!config?.users?.length) {
+    throw new Error("No users configured");
   }
-  console.log("genshin checkin result", result);
-  return result;
+
+  const results = await Promise.all(
+    config.users.map(async (user) => {
+      try {
+        validateUserInput(user);
+        return await checkinHandler(
+          user.cookies,
+          config.lang || API_CONFIG.DEFAULT_LANG
+        );
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+    })
+  );
+
+  console.log("Genshin checkin results:", results);
+
+  return results;
 };

@@ -3,7 +3,7 @@
 ## Available Plugins
 
 <details>
-    <summary>🔧 <a href="https://github.com/mastersamasama/Mihoyo-AutoSign-Hub/blob/main/api/plugins/genshin.js">Genshin Sign</a> | Author: mastersamasama | Updated: 2025-03-15</summary>
+    <summary>🔧 <a href="https://github.com/mastersamasama/Mihoyo-AutoSign-Hub/blob/main/api/plugins/genshin.js">Genshin Sign</a> | Author: mastersamasama | Updated: 2025-03-20</summary>
 
 **Automated daily check-ins for [Genshin Impact](https://genshin.hoyoverse.com/)**
 
@@ -29,7 +29,7 @@ Never share your cookies with anyone!
 </details>
 
 <details>
-    <summary>🚄 <a href="https://github.com/mastersamasama/Mihoyo-AutoSign-Hub/blob/main/api/plugins/starrail.js">Star Rail Sign</a> | Author: mastersamasama | Updated: 2025-03-13</summary>
+    <summary>🚄 <a href="https://github.com/mastersamasama/Mihoyo-AutoSign-Hub/blob/main/api/plugins/starrail.js">Star Rail Sign</a> | Author: mastersamasama | Updated: 2025-03-20</summary>
 
 **Automated check-ins for [Honkai: Star Rail](https://hsr.hoyoverse.com/)**
 
