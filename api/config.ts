@@ -14,10 +14,7 @@ export const getConfig = (): GlobalConfig => ({
                 users: [
                     {
                         cookies: getSecret?.('GENSHIN_COOKIES')
-                    },
-                    {
-                        cookies: getSecret?.('STARRAIL_COOKIES')
-                    },
+                    }
                 ],
                 lang: myLanguage,
             }
@@ -29,10 +26,7 @@ export const getConfig = (): GlobalConfig => ({
                 users: [
                     {
                         cookies: getSecret?.('STARRAIL_COOKIES')
-                    },
-                    {
-                        cookies: getSecret?.('GENSHIN_COOKIES')
-                    },
+                    }
                 ],
                 lang: myLanguage,
             }

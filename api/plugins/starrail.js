@@ -3,7 +3,7 @@ export const meta = {
   version: "0.0.2",
   author: "mastersamasama",
   date: "2025-03-20",
-  contact: "https://github.com/mastersamasama/mihoyo-checkin/issues",
+  contact: "https://github.com/mastersamasama/Mihoyo-AutoSign-Hub/issues",
   description: "Help get Honkai: Star Rail daily checkin rewards",
   support: "os",
 };

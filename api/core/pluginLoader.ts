@@ -39,7 +39,7 @@ export class PluginLoader {
      */
     private validateModule(module: any, name: string): PluginModule {
         if (typeof module.checkin !== 'function') {
-            throw new Error(`[${name}] 插件必须导出 checkin 函数`);
+            throw new Error(`Plugin[${name}] must export a 'checkin' function`);
         }
         return module;
     }

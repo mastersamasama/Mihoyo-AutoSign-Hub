@@ -41,6 +41,5 @@ export class MiddlewareLoader {
         };
     }
 
-    // 复用PluginLoader的import逻辑
     private importModule = importModule;
 }

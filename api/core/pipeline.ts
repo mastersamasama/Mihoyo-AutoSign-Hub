@@ -92,7 +92,7 @@ export class ExecutionPipeline {
           plugins_meta: mwContext.plugins_meta[pluginName] as any,
           error: error as Error
         });
-        console.log(`[${pluginName}] 插件执行失败:`, error);
+        console.log(`Middleware[${pluginName}] execute error:`, error);
       }
     }
   }
