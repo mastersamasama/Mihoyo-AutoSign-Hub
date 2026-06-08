@@ -30,6 +30,36 @@ export const getConfig = (): GlobalConfig => ({
                 ],
                 lang: myLanguage,
             }
+        },
+        {
+            name: 'genshin-redeem',
+            modulePath: "@official/redeem.js",
+            options: {
+                game: 'genshin',
+                users: [
+                    {
+                        cookies: getSecret?.('GENSHIN_COOKIES')
+                    }
+                ],
+                lang: myLanguage,
+                maxPerRun: 8,
+                kv: { url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN },
+            }
+        },
+        {
+            name: 'starrail-redeem',
+            modulePath: "@official/redeem.js",
+            options: {
+                game: 'starrail',
+                users: [
+                    {
+                        cookies: getSecret?.('STARRAIL_COOKIES')
+                    }
+                ],
+                lang: myLanguage,
+                maxPerRun: 8,
+                kv: { url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN },
+            }
         }
     ],
     middlewares: [

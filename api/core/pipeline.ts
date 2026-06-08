@@ -33,8 +33,13 @@ export class ExecutionPipeline {
     if (!this.globalConfig.plugins) return;
 
     for (const config of this.globalConfig.plugins) {
-      const { name, instance } = await this.pluginLoader.load(config, this.globalConfig);
-      this.plugins.set(name, instance);
+      try {
+        const { name, instance } = await this.pluginLoader.load(config, this.globalConfig);
+        this.plugins.set(name, instance);
+      } catch (error) {
+        // a missing/broken module must not abort loading of the other plugins
+        console.log(`Plugin[${config.name}] load failed (skipped):`, error);
+      }
     }
   }
 
@@ -49,9 +54,13 @@ export class ExecutionPipeline {
     if (!this.globalConfig.middlewares) return;
 
     for (const config of this.globalConfig.middlewares) {
-      const { name, instance } = await this.middlewareLoader.load(config, this.globalConfig);
-      this.middlewares.set(name, instance);
-      this.middlewareTargets.set(name, config.target || ['*']);
+      try {
+        const { name, instance } = await this.middlewareLoader.load(config, this.globalConfig);
+        this.middlewares.set(name, instance);
+        this.middlewareTargets.set(name, config.target || ['*']);
+      } catch (error) {
+        console.log(`Middleware[${config.name}] load failed (skipped):`, error);
+      }
     }
   }
 
