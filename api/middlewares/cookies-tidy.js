@@ -1,10 +1,13 @@
-function preCheckin(ctx) {
-    if (ctx.plugin_options?.users?.cookies) {
-        for (let user of ctx.plugin_options.users) {
-            user.cookies = user.cookies.split(";").map((cookie) => cookie.trim()).join(";");
+// hooks are invoked as (options, ctx) — see middlewareLoader.wrapMiddleware
+function preCheckin(_options, ctx) {
+    const users = ctx?.plugin_options?.users;
+    if (Array.isArray(users)) {
+        for (let user of users) {
+            if (user?.cookies) {
+                user.cookies = user.cookies.split(";").map((cookie) => cookie.trim()).join(";");
+            }
         }
     }
-    console.log("preCheckin", ctx.plugin_options);
 }
 
 

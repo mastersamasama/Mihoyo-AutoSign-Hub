@@ -4,8 +4,8 @@ import { GlobalConfig } from './types/common.js';
 const myLanguage = 'zh-tw';
 
 export const getConfig = (): GlobalConfig => ({
-    plugin_repo: "https://github.com/mastersamasama/Mihoyo-AutoSign-Hub/raw/main/api/plugins",
-    middleware_repo: "https://github.com/mastersamasama/Mihoyo-AutoSign-Hub/raw/main/api/middlewares",
+    plugin_repo: "https://raw.githubusercontent.com/mastersamasama/Mihoyo-AutoSign-Hub/main/api/plugins",
+    middleware_repo: "https://raw.githubusercontent.com/mastersamasama/Mihoyo-AutoSign-Hub/main/api/middlewares",
     plugins: [
         {
             name: 'genshin',

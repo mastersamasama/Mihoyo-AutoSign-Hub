@@ -138,7 +138,12 @@ export class ExecutionPipeline {
     for (const [mwName, middleware] of this.middlewares) {
       const targets = this.middlewareTargets.get(mwName) || ['*'];
       if (this.shouldApply(targets, pluginName)) {
-        await middleware[hook]?.(ctx as any);
+        // a misbehaving middleware must never abort the plugin's check-in
+        try {
+          await middleware[hook]?.(ctx as any);
+        } catch (error) {
+          console.log(`Middleware[${mwName}] ${hook} error:`, error);
+        }
       }
     }
   }
