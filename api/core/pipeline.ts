@@ -66,7 +66,7 @@ export class ExecutionPipeline {
 
     for (const [pluginName, plugin] of this.plugins) {
       // create a context object for the middleware in this plugin cycle
-      const mwContext = this.createMiddlewareBaseContext(pluginName);
+      const mwContext = this.createMiddlewareBaseContext();
 
       try {
         // execute pre hooks
@@ -92,13 +92,13 @@ export class ExecutionPipeline {
           plugins_meta: mwContext.plugins_meta[pluginName] as any,
           error: error as Error
         });
-        console.log(`Middleware[${pluginName}] execute error:`, error);
+        console.log(`Plugin[${pluginName}] execute error:`, error);
       }
     }
   }
 
 
-  private createMiddlewareBaseContext(name: string): context {
+  private createMiddlewareBaseContext(): context {
     return {
       plugins_meta: Object.fromEntries(
         Array.from(this.plugins).map(([name, p]) => [name, { ...p.meta }])

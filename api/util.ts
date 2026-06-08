@@ -7,7 +7,6 @@
 export const getSecret = (key: string) => {
     const secret = process.env[key];
     if (!secret) {
-        console.log(process.env);
         throw new Error(`Secret ${key} is not found`);
     }
     return secret;

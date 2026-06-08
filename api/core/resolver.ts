@@ -38,7 +38,7 @@ export class PluginResolver {
     // only add default rule when user didn't override @official/ and repo is defined
     if (config.plugin_repo && !config.pathResolvers?.['@official/']) {
       defaults['@official/'] = (path: string) =>
-        `${config.plugin_repo}/${path.replace('@official/', '')}`;
+        `${config.plugin_repo}/${path.replace('@official/', '').replace(/^\/+/, '')}`;
     }
 
     return defaults;
@@ -89,7 +89,7 @@ export class MiddlewareResolver {
 
     if (config.middleware_repo && !config.pathResolvers?.['@official/']) {
       defaults['@official/'] = (path: string) =>
-        `${config.middleware_repo}/${path.replace('@official/', '')}`;
+        `${config.middleware_repo}/${path.replace('@official/', '').replace(/^\/+/, '')}`;
     }
 
     return defaults;

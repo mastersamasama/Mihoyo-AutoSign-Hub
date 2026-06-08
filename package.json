@@ -8,6 +8,7 @@
 	"scripts": {
 		"build": "tsc && cp -r api/{plugins,middlewares} dist/api/",
 		"dev": "NODE_ENV=development vercel dev",
-		"start": "node dist/api/index.js"
+		"start": "node dist/api/index.js",
+		"test": "tsc && node dist/api/test.js"
 	}
 }

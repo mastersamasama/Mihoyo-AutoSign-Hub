@@ -103,7 +103,7 @@ export const checkin = async (config) => {
     })
   );
 
-  console.log("Genshin checkin results:", results);
+  console.log("Star Rail checkin results:", results);
 
   return results;
 };

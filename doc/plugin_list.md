@@ -24,7 +24,7 @@
 Never share your cookies with anyone!
 
 ### Resources
-- [How to Get Cookies Guide](https://github.com/mastersamasama/mihoyo-checkin/blob/master/doc/how_to_get_cookies.md)
+- [How to Get Cookies Guide](https://github.com/mastersamasama/Mihoyo-AutoSign-Hub/blob/main/doc/how_to_get_cookies_en-us.md)
 - Supported Regions: Global
 </details>
 

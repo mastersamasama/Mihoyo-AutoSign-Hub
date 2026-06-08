@@ -20,10 +20,12 @@ export class PluginLoader {
     ): Promise<LoadResult<PluginModule>> {
         const resolvedPath = PluginResolver.resolve(config.modulePath, globalConfig);
         const module = await this.importModule(resolvedPath);
+        // support both `export const checkin` and `export default { checkin }`
+        const resolved = typeof module?.default?.checkin === 'function' ? module.default : module;
 
         return {
             name: config.name,
-            instance: this.validateModule(module, config.name)
+            instance: this.validateModule(resolved, config.name)
         };
     }
 

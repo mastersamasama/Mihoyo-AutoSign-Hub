@@ -34,10 +34,12 @@ export class MiddlewareLoader {
      * @param options - The middleware options
      */
     private wrapMiddleware(module: any, options: any): Middleware {
+        // support both named exports and `export default { ... }` style middlewares
+        const m = (module?.default && typeof module.default === 'object') ? module.default : module;
         return {
-            preCheckin: module.preCheckin?.bind(null, options),
-            postCheckin: module.postCheckin?.bind(null, options),
-            onError: module.onError?.bind(null, options)
+            preCheckin: m.preCheckin?.bind(null, options),
+            postCheckin: m.postCheckin?.bind(null, options),
+            onError: m.onError?.bind(null, options)
         };
     }
 

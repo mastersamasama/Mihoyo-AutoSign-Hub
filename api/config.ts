@@ -9,7 +9,7 @@ export const getConfig = (): GlobalConfig => ({
     plugins: [
         {
             name: 'genshin',
-            modulePath: "@official//genshin.js",
+            modulePath: "@official/genshin.js",
             options: {
                 users: [
                     {
@@ -20,7 +20,7 @@ export const getConfig = (): GlobalConfig => ({
             }
         },
         {
-            name: 'star rail',
+            name: 'starrail',
             modulePath: "@official/starrail.js",
             options: {
                 users: [
