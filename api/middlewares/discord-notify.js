@@ -242,6 +242,9 @@ export async function postCheckin(options, ctx) {
     return;
   }
 
+  // check-in (sign) path — keep the original debug dump for troubleshooting
+  console.log("discord-notify:", ctx);
+
   const embed = buildEmbed(ctx, t);
   const tag_filter = options["tag_filter"] || [0];
   let mentionString = "";
