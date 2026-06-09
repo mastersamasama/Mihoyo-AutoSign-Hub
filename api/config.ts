@@ -44,7 +44,8 @@ export const getConfig = (): GlobalConfig => ({
                     }
                 ],
                 lang: myLanguage,
-                maxPerRun: 8,
+                maxPerRun: 6,
+                timeBudgetMs: 16000, // hard per-game cap so check-in + both redeems fit the 60s function
                 kv: { url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN },
             }
         },
@@ -59,7 +60,8 @@ export const getConfig = (): GlobalConfig => ({
                     }
                 ],
                 lang: myLanguage,
-                maxPerRun: 8,
+                maxPerRun: 6,
+                timeBudgetMs: 16000, // hard per-game cap so check-in + both redeems fit the 60s function
                 kv: { url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN },
             }
         }

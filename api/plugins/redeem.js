@@ -46,7 +46,7 @@ const SOURCES = [
   {
     name: "ennead", // validity (active flag), no date
     url: (g) => `https://api.ennead.cc/mihoyo/${g.src.ennead}/codes`,
-    pick: (j) => (j?.active ?? []).map((e) => ({ code: e.code, reward: (e.rewards || []).join("; ") })),
+    pick: (j) => (j?.active ?? []).map((e) => ({ code: e.code, reward: (e.rewards || []).join("; "), vouched: true })),
   },
   {
     name: "hashblen", // recency (added_at Unix), no validity flag
@@ -56,7 +56,7 @@ const SOURCES = [
   {
     name: "seriaati", // validated active-only (fallback)
     url: (g) => `https://hoyo-codes.seria.moe/codes?game=${g.src.seriaati}`,
-    pick: (j) => (j?.codes ?? []).filter((c) => c.status === "OK").map((c) => ({ code: c.code, reward: c.rewards || "" })),
+    pick: (j) => (j?.codes ?? []).filter((c) => c.status === "OK").map((c) => ({ code: c.code, reward: c.rewards || "", vouched: true })),
     fallback: true,
   },
 ];
@@ -85,15 +85,19 @@ function mergeCodes(lists) {
   for (const item of lists.flat()) {
     const code = normCode(item);
     if (!code || !isValidCode(code)) continue; // drop junk / spaces / slashes
-    const prev = out.get(code) ?? { code, reward: "", added_at: undefined };
+    const prev = out.get(code) ?? { code, reward: "", added_at: undefined, vouched: false };
     out.set(code, {
       code,
       reward: prev.reward || item.reward || "",
       added_at: prev.added_at ?? item.added_at,
+      vouched: prev.vouched || !!item.vouched, // a validity source (ennead/seriaati) confirmed it active
     });
   }
-  // newest-first; undated treated as newest (always attempted = "if no time then all sign")
-  return [...out.values()].sort((a, b) => (b.added_at ?? Infinity) - (a.added_at ?? Infinity));
+  // vouched-active first so a limited per-run time budget is spent on likely-valid
+  // codes; then newest-first (undated treated as newest = "if no time then all sign").
+  return [...out.values()].sort(
+    (a, b) => Number(b.vouched) - Number(a.vouched) || (b.added_at ?? Infinity) - (a.added_at ?? Infinity)
+  );
 }
 
 const REDEEM_COOKIE_KEYS = ["cookie_token_v2", "account_mid_v2", "account_id_v2", "cookie_token", "account_id"];
@@ -196,6 +200,10 @@ const THROTTLE_MS = 5500;
 const COOLDOWN_MS = 6000;
 
 async function redeemForUser(game, user, config, store) {
+  // Hard wall-clock budget: the serverless function has a fixed timeout, so cap how
+  // long this game's redeem may run. Codes we don't reach are picked up next run.
+  const deadline = Date.now() + (config.timeBudgetMs ?? 16000);
+
   const role = await getRole(game, user.cookies); // CookieError bubbles to checkin's catch
   if (role.level < game.arGate) {
     return [{ status: "skipped", message: `AR ${role.level} < ${game.arGate}`, nickname: role.nickname }];
@@ -214,14 +222,17 @@ async function redeemForUser(game, user, config, store) {
   todo = keep.slice(0, config.maxPerRun ?? 8);
 
   const out = [];
-  for (const c of todo) {
+  for (let i = 0; i < todo.length; i++) {
+    const c = todo[i];
     if (config.dryRun) {
       out.push({ code: c.code, reward: c.reward, status: "dry-run", added_at: c.added_at });
       continue;
     }
+    if (Date.now() > deadline) break; // out of time budget — leftovers retry next run
+
     let { retcode, message } = await redeemCode(game, role, user.cookies, c.code, config.lang);
     let v = classify(retcode);
-    if (v.cooldown) {
+    if (v.cooldown && Date.now() + COOLDOWN_MS < deadline) {
       await sleep(COOLDOWN_MS);
       ({ retcode, message } = await redeemCode(game, role, user.cookies, c.code, config.lang));
       v = classify(retcode);
@@ -229,7 +240,8 @@ async function redeemForUser(game, user, config, store) {
     if (v.cookieDead) { out.push({ code: c.code, retcode, status: v.label, message }); break; }
     if (v.done) await store.add(key, c.code);
     out.push({ code: c.code, reward: c.reward, retcode, status: v.label, message });
-    await sleep(THROTTLE_MS);
+    // throttle between codes, but never sleep past the budget or after the last code
+    if (i < todo.length - 1 && Date.now() + THROTTLE_MS < deadline) await sleep(THROTTLE_MS);
   }
   return out;
 }
