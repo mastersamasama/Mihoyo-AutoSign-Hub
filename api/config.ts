@@ -9,7 +9,7 @@ export const getConfig = (): GlobalConfig => ({
     plugins: [
         {
             name: 'genshin',
-            modulePath: "@official/genshin.js",
+            modulePath: "./plugins/genshin.js",
             options: {
                 users: [
                     {
@@ -21,7 +21,7 @@ export const getConfig = (): GlobalConfig => ({
         },
         {
             name: 'starrail',
-            modulePath: "@official/starrail.js",
+            modulePath: "./plugins/starrail.js",
             options: {
                 users: [
                     {
@@ -33,7 +33,7 @@ export const getConfig = (): GlobalConfig => ({
         },
         {
             name: 'genshin-redeem',
-            modulePath: "@official/redeem.js",
+            modulePath: "./plugins/redeem.js",
             options: {
                 game: 'genshin',
                 users: [
@@ -50,7 +50,7 @@ export const getConfig = (): GlobalConfig => ({
         },
         {
             name: 'starrail-redeem',
-            modulePath: "@official/redeem.js",
+            modulePath: "./plugins/redeem.js",
             options: {
                 game: 'starrail',
                 users: [
@@ -67,11 +67,11 @@ export const getConfig = (): GlobalConfig => ({
     middlewares: [
         {
             name: 'cookies-tidy',
-            modulePath: '@official/cookies-tidy.js',
+            modulePath: './middlewares/cookies-tidy.js',
         },
         {
             name: 'discord-notify',
-            modulePath: '@official/discord-notify.js',
+            modulePath: './middlewares/discord-notify.js',
             target: ['*'],  // list of names of plugins to target, '*' means all plugins, default is ['*']
             options: {
                 webhook: getSecret?.('DISCORD_WEBHOOK'),

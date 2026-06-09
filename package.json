@@ -6,10 +6,10 @@
 		"@vercel/node": "^5.1.13"
 	},
 	"scripts": {
-		"build": "tsc && cp -r api/{plugins,middlewares} dist/api/",
+		"build": "tsc && cp -r api/plugins api/middlewares dist/api/",
 		"dev": "NODE_ENV=development vercel dev",
 		"start": "node dist/api/index.js",
-		"test": "tsc && node dist/api/test.js",
+		"test": "npm run build && node dist/api/test.js",
 		"test:redeem": "node api/redeem.test.mjs"
 	}
 }
