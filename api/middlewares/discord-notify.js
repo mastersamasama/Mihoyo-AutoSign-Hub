@@ -149,6 +149,8 @@ const REDEEM_I18N = {
     cookie_title: "⚠️ Redeem Cookie Expired",
     mixed_title: "🎁 Redeemed (with issues)",
     cookie_hint: "Cookie expired — refresh the redeem cookie",
+    uptodate_title: "✅ No new codes",
+    error_title: "⚠️ Temporarily unavailable (will retry next run)",
   },
   "zh-cn": {
     new_codes: "🎁 新兑换码",
@@ -157,6 +159,8 @@ const REDEEM_I18N = {
     cookie_title: "⚠️ 兑换 Cookie 已失效",
     mixed_title: "🎁 已兑换（部分异常）",
     cookie_hint: "Cookie 已失效 — 请刷新兑换 Cookie",
+    uptodate_title: "✅ 暂无新兑换码",
+    error_title: "⚠️ 暂时无法兑换（下次自动重试）",
   },
   "zh-tw": {
     new_codes: "🎁 新兌換碼",
@@ -165,6 +169,8 @@ const REDEEM_I18N = {
     cookie_title: "⚠️ 兌換 Cookie 已失效",
     mixed_title: "🎁 已兌換（部分異常）",
     cookie_hint: "Cookie 已失效 — 請刷新兌換 Cookie",
+    uptodate_title: "✅ 暫無新兌換碼",
+    error_title: "⚠️ 暫時無法兌換（下次自動重試）",
   },
   ja: {
     new_codes: "🎁 新しいコード",
@@ -173,6 +179,8 @@ const REDEEM_I18N = {
     cookie_title: "⚠️ 引き換え Cookie の期限切れ",
     mixed_title: "🎁 引き換え済み（一部エラー）",
     cookie_hint: "Cookie の期限切れ — 引き換え Cookie を更新してください",
+    uptodate_title: "✅ 新しいコードなし",
+    error_title: "⚠️ 一時的に利用不可（次回再試行）",
   },
   ko: {
     new_codes: "🎁 새 코드",
@@ -181,6 +189,8 @@ const REDEEM_I18N = {
     cookie_title: "⚠️ 교환 쿠키 만료",
     mixed_title: "🎁 교환 완료 (일부 오류)",
     cookie_hint: "쿠키 만료 — 교환 쿠키를 갱신하세요",
+    uptodate_title: "✅ 새 코드 없음",
+    error_title: "⚠️ 일시적으로 사용 불가 (다음에 재시도)",
   },
 };
 
@@ -192,7 +202,10 @@ function tr(lang, key, vars) {
 
 // a redeem result item carries a `status` string (set by the redeem plugin).
 const REDEEM_NEW = (r) => r?.retcode === 0 || r?.status === "redeemed";
-const REDEEM_PROBLEM = (r) => r?.status === "cookie_expired" || r?.status === "error";
+// Only a real, persistent cookie problem is worth an @mention. A transient `error`
+// (e.g. a rate-limited role lookup) is shown as a thin neutral note, never a ping.
+const REDEEM_PROBLEM = (r) => r?.status === "cookie_expired";
+const REDEEM_ERROR = (r) => r?.status === "error";
 
 function clip(value, max = 1000) {
   if (!value) return "—";
@@ -229,14 +242,12 @@ export async function postCheckin(options, ctx) {
   if (isRedeem) {
     const news = results.filter(REDEEM_NEW);
     const problems = results.filter(REDEEM_PROBLEM);
+    const errored = results.some(REDEEM_ERROR);
 
-    // nothing new + no problems → stay silent (kills the daily noise).
-    if (news.length === 0 && problems.length === 0) {
-      console.log(`discord-notify: ${ctx.plugin_name} nothing new, suppressed`);
-      return;
-    }
-
-    const embed = buildRedeemEmbed(ctx, language, news, problems);
+    // Always notify, but stay thin: a single line when nothing happened (or a
+    // transient error), a fuller embed only when there are new codes or a real
+    // cookie problem. Only cookie problems @mention.
+    const embed = buildRedeemEmbed(ctx, language, news, problems, errored);
     const mention = problems.length > 0 ? buildMentionString(mentionUsers) : "";
     await sendNotification(webhook, { content: mention, embeds: [embed] });
     return;
@@ -245,7 +256,14 @@ export async function postCheckin(options, ctx) {
   // check-in (sign) path — keep the original debug dump for troubleshooting
   console.log("discord-notify:", ctx);
 
-  const embed = buildEmbed(ctx, t);
+  // routine success / already-signed → thin embed (title only). Only show the verbose
+  // embed (plugin info, timing, per-user results, retry advice) when something failed,
+  // so problems stay actionable.
+  const allOk = results.length > 0 && results.every((r) => isOkRetcode(r.retcode));
+  const embed = allOk
+    ? buildThinEmbed(ctx, getResultTitle(results, t), getStatusColor(results))
+    : buildEmbed(ctx, t);
+
   const tag_filter = options["tag_filter"] || [0];
   let mentionString = "";
   if (getResultCountByRetcode(results, tag_filter) < results.length) {
@@ -258,8 +276,29 @@ export async function postCheckin(options, ctx) {
   });
 }
 
+// minimal embed: title + colour only (used for routine sign success / already-signed)
+function buildThinEmbed(ctx, title, color) {
+  return {
+    title: `${ctx.plugin_name ? `[${ctx.plugin_name}] ` : ""}${title}`,
+    color,
+    timestamp: new Date().toISOString(),
+  };
+}
+
 // Clean, focused embed for redeem: only new codes and/or problems.
-function buildRedeemEmbed(ctx, language, news, problems) {
+function buildRedeemEmbed(ctx, language, news, problems, errored = false) {
+  const prefix = ctx.plugin_name ? `[${ctx.plugin_name}] ` : "";
+
+  // nothing new and nothing wrong → thin one-line embed (title only).
+  // a transient error gets a neutral "temporarily unavailable" note, no @mention.
+  if (!news.length && !problems.length) {
+    return {
+      title: `${prefix}${tr(language, errored ? "error_title" : "uptodate_title")}`,
+      color: errored ? 0xf1c40f : 0x2ecc71,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const fields = [];
 
   if (news.length) {
