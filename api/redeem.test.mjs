@@ -60,7 +60,10 @@ test("pickCookie keeps only redeem token keys", () => {
 console.log(`\n${n} unit assertions passed\n`);
 
 // ───────────── optional DRY RUN ─────────────
-const cookies = { genshin: process.env.GENSHIN_COOKIES, starrail: process.env.STARRAIL_COOKIES };
+const cookies = {
+  genshin: process.env.GENSHIN_REDEEM_COOKIES || process.env.GENSHIN_COOKIES,
+  starrail: process.env.STARRAIL_REDEEM_COOKIES || process.env.STARRAIL_COOKIES,
+};
 if (cookies.genshin || cookies.starrail) {
   console.log("DRY RUN (real roles + codes, NO redeem calls, nothing consumed)");
   for (const game of ["genshin", "starrail"]) {

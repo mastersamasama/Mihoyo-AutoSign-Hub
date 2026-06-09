@@ -241,7 +241,7 @@ function buildEmbed(ctx, t) {
   let embed_fields = fields_option.map((field) => discord_fields[field]);
 
   return {
-    title: getResultTitle(result, t),
+    title: `${ctx.plugin_name ? `[${ctx.plugin_name}] ` : ""}${getResultTitle(result, t)}`,
     color: getStatusColor(result),
     fields: embed_fields,
     timestamp: new Date().toISOString(),
@@ -249,10 +249,10 @@ function buildEmbed(ctx, t) {
 }
 
 function buildErrorEmbed(ctx, t) {
-  const { error, timestamp } = ctx;
+  const { error, plugin_name } = ctx;
 
   return {
-    title: t("status.error"),
+    title: `${plugin_name ? `[${plugin_name}] ` : ""}${t("status.error")}`,
     color: 0xff0000,
     fields: [
       {
@@ -277,32 +277,36 @@ function getResultCountByRetcode(results, retcode) {
   return results.filter((r) => retcode.includes(r.retcode)).length;
 }
 
-function getResultTitle(results, t) {
-  const successCount = results.filter((r) => r.retcode === 0).length;
+// already-claimed / already-signed count as "ok" (not a failure) for title + color
+const isOkRetcode = (rc) => [0, -5003, -2017, -2018].includes(rc);
 
-  if (successCount === results.length) return t("status.success");
-  if (successCount > 0) return t("status.partial");
+function getResultTitle(results, t) {
+  const ok = results.filter((r) => isOkRetcode(r.retcode)).length;
+
+  if (ok === results.length) return t("status.success");
+  if (ok > 0) return t("status.partial");
   return t("status.failed");
 }
 
 function getStatusColor(results) {
-  const successCount = results.filter((r) => r.retcode === 0).length;
-  if (successCount === results.length) return 0x00ff00; // green when all success
-  if (successCount > 0) return 0xffa500; // orange when partial success
+  const ok = results.filter((r) => isOkRetcode(r.retcode)).length;
+  if (ok === results.length) return 0x00ff00; // green when all ok
+  if (ok > 0) return 0xffa500; // orange when partial
   return 0xff0000; // red when all failed
 }
 
 function formatResults(results, t) {
-  return results
-    .map((res, index) => {
-      const status = getResultStatus(res, t);
-      return `**User ${index + 1}**: ${status}\n\`\`\`${JSON.stringify(
-        res,
-        null,
-        2
-      )}\`\`\``;
-    })
-    .join("\n\n");
+  // compact one line per result; handles redeem (has `code`) and check-in (User N).
+  // Discord caps a field value at 1024 chars, so keep it short and truncate safely.
+  const lines = results.map((res, index) => {
+    const label = res.code || `User ${index + 1}`;
+    return `• ${label}: ${getResultStatus(res, t)}`;
+  });
+  let value = lines.join("\n");
+  if (value.length > 1000) {
+    value = value.slice(0, 960).replace(/\n[^\n]*$/, "") + `\n… (${results.length} total)`;
+  }
+  return value || "—";
 }
 
 function getResultStatus(res, t) {
@@ -310,6 +314,8 @@ function getResultStatus(res, t) {
     case 0:
       return t("status.success");
     case -5003:
+    case -2017:
+    case -2018:
       return t("messages.already_claimed");
     case -100:
       return t("messages.cookie_expired");

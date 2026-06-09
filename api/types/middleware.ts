@@ -1,6 +1,7 @@
 export interface context {
     plugins_meta: { [name: string]: Record<string, string> }, // meta data of plugins
     timestamp: number; // timeStamps of checkin process started
+    plugin_name?: string; // config name of the plugin this cycle targets (e.g. genshin-redeem)
 }
 
 export interface preContext extends context {

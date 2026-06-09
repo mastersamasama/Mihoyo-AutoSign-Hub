@@ -41,9 +41,12 @@
       `node --env-file=.env.local api/redeem.test.mjs`.
 - [x] 4.3 DRY RUN run: 5/5 asserts; chain reached roles lookup → surfaced cookie finding (see §8).
 
-## 5. `discord-notify` compatibility — R9  (PENDING)
-- [ ] 5.1 Confirm redeem result shape `{code,reward,retcode,status,message}` renders in the embed;
-      if not, add a minimal code/reward line. Consider adding `-2017` to `tag_filter`.
+## 5. `discord-notify` compatibility — R9
+- [x] 5.1 Fixed `formatResults` to emit compact `• CODE: status` lines capped < 1024 chars (the
+      full-JSON-per-result dump overflowed Discord's field limit → `{"embeds":["0"]}`); mapped
+      `-2017`/`-2018` → already-claimed and counted as OK for title/color. Validated: a 9-code
+      redeem embed was accepted by the live webhook (no Discord API error). Goes live on push
+      (runtime fetches the remote `discord-notify.js`).
 
 ## 6. `vercel.json` — Vercel limits/region  (PENDING)
 - [ ] 6.1 `functions["api/index.ts"].maxDuration` ≥ 60, `regions:["sin1"]`; keep the daily `crons`.
@@ -53,14 +56,18 @@
       required cookie keys (`cookie_token_v2`/`account_mid_v2`/`account_id_v2`), optional
       `KV_REST_*`, the Genshin AR≥10 gate, and the 5.5s throttle.
 
-## 8. Final / ship-blockers  (PENDING)
-- [ ] 8.1 **Cookie**: DRY RUN returned roles `-100 Login expired` — the current `*_COOKIES` lack a
-      valid `cookie_token_v2`. Redeem needs fresh `cookie_token_v2`+`account_mid_v2`+`account_id_v2`
-      (shorter-lived than the check-in `ltoken`). Resolve before live redeem.
+## 8. Final / ship-blockers
+- [x] 8.1 **Cookie**: refreshed via agent-browser (CDP `state save` → HttpOnly
+      `cookie_token_v2`/`account_mid_v2`/`account_id_v2` merged into `.env.local`, preserving the
+      long-lived `ltoken`). Live run confirmed both games resolve roles.
 - [ ] 8.2 **Push**: runtime fetches `@official/redeem.js` from pushed `main` (currently 404). Push
       to activate; then re-run DRY RUN against the remote.
-- [ ] 8.3 **Star Rail host**: verify `sg-hkrpg-api...CdkeyRisk` with one live `REDEEM_LIVE` code once
-      cookies are valid.
+- [x] 8.3 **Star Rail host**: CONFIRMED — live redeem via `sg-hkrpg-api...CdkeyRisk` returned `0`
+      for new codes and `-2017` for already-claimed (idempotency proven). Genshin host likewise.
+- [ ] 8.4 **cookie_token_v2 expiry** (NEW): redeem tokens are short-lived (~hrs–1d) unlike the
+      check-in `ltoken`. On the Vercel cron they will expire → redeem returns `-100` until
+      refreshed (check-in unaffected). Mitigation later: stoken→cookie_token refresh, or periodic
+      manual recapture.
 
 ## Status
 T1–T4 **done & validated** (5/5 unit asserts; DRY RUN exercised the full chain; check-in unaffected

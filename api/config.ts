@@ -38,7 +38,9 @@ export const getConfig = (): GlobalConfig => ({
                 game: 'genshin',
                 users: [
                     {
-                        cookies: getSecret?.('GENSHIN_COOKIES')
+                        // redeem uses short-lived cookie_token; keep it separate from the
+                        // long-lived check-in cookie. Fall back to GENSHIN_COOKIES if unset.
+                        cookies: process.env.GENSHIN_REDEEM_COOKIES ?? getSecret?.('GENSHIN_COOKIES')
                     }
                 ],
                 lang: myLanguage,
@@ -53,7 +55,7 @@ export const getConfig = (): GlobalConfig => ({
                 game: 'starrail',
                 users: [
                     {
-                        cookies: getSecret?.('STARRAIL_COOKIES')
+                        cookies: process.env.STARRAIL_REDEEM_COOKIES ?? getSecret?.('STARRAIL_COOKIES')
                     }
                 ],
                 lang: myLanguage,

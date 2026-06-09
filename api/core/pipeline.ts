@@ -92,6 +92,7 @@ export class ExecutionPipeline {
         await this.runPostHooks(pluginName, {
           ...mwContext,
           plugins_meta: mwContext.plugins_meta[pluginName] as any,
+          plugin_name: pluginName,
           result
         });
       } catch (error) {
@@ -99,6 +100,7 @@ export class ExecutionPipeline {
         await this.runErrorHooks(pluginName, {
           ...mwContext,
           plugins_meta: mwContext.plugins_meta[pluginName] as any,
+          plugin_name: pluginName,
           error: error as Error
         });
         console.log(`Plugin[${pluginName}] execute error:`, error);
