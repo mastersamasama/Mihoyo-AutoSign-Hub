@@ -253,16 +253,12 @@ export async function postCheckin(options, ctx) {
     return;
   }
 
-  // check-in (sign) path — keep the original debug dump for troubleshooting
+  // check-in (sign) path — keep the original debug dump for troubleshooting.
+  // The sign message stays FULL (plugin info, timing, results) as before — only the
+  // redeem message was changed. (per "only work on redeem discord message is ok")
   console.log("discord-notify:", ctx);
 
-  // routine success / already-signed → thin embed (title only). Only show the verbose
-  // embed (plugin info, timing, per-user results, retry advice) when something failed,
-  // so problems stay actionable.
-  const allOk = results.length > 0 && results.every((r) => isOkRetcode(r.retcode));
-  const embed = allOk
-    ? buildThinEmbed(ctx, getResultTitle(results, t), getStatusColor(results))
-    : buildEmbed(ctx, t);
+  const embed = buildEmbed(ctx, t);
 
   const tag_filter = options["tag_filter"] || [0];
   let mentionString = "";
@@ -274,15 +270,6 @@ export async function postCheckin(options, ctx) {
     content: mentionString,
     embeds: [embed],
   });
-}
-
-// minimal embed: title + colour only (used for routine sign success / already-signed)
-function buildThinEmbed(ctx, title, color) {
-  return {
-    title: `${ctx.plugin_name ? `[${ctx.plugin_name}] ` : ""}${title}`,
-    color,
-    timestamp: new Date().toISOString(),
-  };
 }
 
 // Clean, focused embed for redeem: only new codes and/or problems.
