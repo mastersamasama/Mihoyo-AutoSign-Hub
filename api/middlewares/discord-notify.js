@@ -139,6 +139,67 @@ const i18n = {
   },
 };
 
+// redeem-specific strings (self-contained, per-key en fallback). Keeps the big
+// i18n table untouched. Only redeem plugins use these.
+const REDEEM_I18N = {
+  en: {
+    new_codes: "🎁 New Codes",
+    problems: "⚠️ Needs Attention",
+    redeemed_title: "🎁 ${count} New Code(s) Redeemed",
+    cookie_title: "⚠️ Redeem Cookie Expired",
+    mixed_title: "🎁 Redeemed (with issues)",
+    cookie_hint: "Cookie expired — refresh the redeem cookie",
+  },
+  "zh-cn": {
+    new_codes: "🎁 新兑换码",
+    problems: "⚠️ 需要处理",
+    redeemed_title: "🎁 兑换了 ${count} 个新兑换码",
+    cookie_title: "⚠️ 兑换 Cookie 已失效",
+    mixed_title: "🎁 已兑换（部分异常）",
+    cookie_hint: "Cookie 已失效 — 请刷新兑换 Cookie",
+  },
+  "zh-tw": {
+    new_codes: "🎁 新兌換碼",
+    problems: "⚠️ 需要處理",
+    redeemed_title: "🎁 兌換了 ${count} 個新兌換碼",
+    cookie_title: "⚠️ 兌換 Cookie 已失效",
+    mixed_title: "🎁 已兌換（部分異常）",
+    cookie_hint: "Cookie 已失效 — 請刷新兌換 Cookie",
+  },
+  ja: {
+    new_codes: "🎁 新しいコード",
+    problems: "⚠️ 要対応",
+    redeemed_title: "🎁 ${count} 件の新コードを引き換え",
+    cookie_title: "⚠️ 引き換え Cookie の期限切れ",
+    mixed_title: "🎁 引き換え済み（一部エラー）",
+    cookie_hint: "Cookie の期限切れ — 引き換え Cookie を更新してください",
+  },
+  ko: {
+    new_codes: "🎁 새 코드",
+    problems: "⚠️ 조치 필요",
+    redeemed_title: "🎁 새 코드 ${count}개 사용 완료",
+    cookie_title: "⚠️ 교환 쿠키 만료",
+    mixed_title: "🎁 교환 완료 (일부 오류)",
+    cookie_hint: "쿠키 만료 — 교환 쿠키를 갱신하세요",
+  },
+};
+
+function tr(lang, key, vars) {
+  const loc = REDEEM_I18N[lang] || REDEEM_I18N.en;
+  const template = loc[key] || REDEEM_I18N.en[key] || "";
+  return template.replace(/\$\{(\w+)\}/g, (_, v) => vars?.[v] ?? "");
+}
+
+// a redeem result item carries a `status` string (set by the redeem plugin).
+const REDEEM_NEW = (r) => r?.retcode === 0 || r?.status === "redeemed";
+const REDEEM_PROBLEM = (r) => r?.status === "cookie_expired" || r?.status === "error";
+
+function clip(value, max = 1000) {
+  if (!value) return "—";
+  if (value.length <= max) return value;
+  return value.slice(0, max - 40).replace(/\n[^\n]*$/, "") + "\n…";
+}
+
 function mergeHookConfig(options, hookType) {
   const baseConfig = { ...options };
   delete baseConfig.postCheckin;
@@ -157,12 +218,34 @@ export async function postCheckin(options, ctx) {
   if (!webhook) return;
 
   const t = createTranslator(language);
-  const embed = buildEmbed(ctx, t);
+  const results = Array.isArray(ctx.result) ? ctx.result : [];
 
-  console.log("discord-notify:", ctx);
+  // Redeem plugins are noisy: every run lists 8 "already claimed" codes. Only
+  // surface what matters — newly redeemed codes or cookie/runtime problems.
+  const isRedeem =
+    /redeem/.test(ctx.plugin_name || "") ||
+    results.some((r) => r && "status" in r && "code" in r);
+
+  if (isRedeem) {
+    const news = results.filter(REDEEM_NEW);
+    const problems = results.filter(REDEEM_PROBLEM);
+
+    // nothing new + no problems → stay silent (kills the daily noise).
+    if (news.length === 0 && problems.length === 0) {
+      console.log(`discord-notify: ${ctx.plugin_name} nothing new, suppressed`);
+      return;
+    }
+
+    const embed = buildRedeemEmbed(ctx, language, news, problems);
+    const mention = problems.length > 0 ? buildMentionString(mentionUsers) : "";
+    await sendNotification(webhook, { content: mention, embeds: [embed] });
+    return;
+  }
+
+  const embed = buildEmbed(ctx, t);
   const tag_filter = options["tag_filter"] || [0];
   let mentionString = "";
-  if (getResultCountByRetcode(ctx.result, tag_filter) < ctx.result.length) {
+  if (getResultCountByRetcode(results, tag_filter) < results.length) {
     mentionString = buildMentionString(mentionUsers);
   }
 
@@ -170,6 +253,58 @@ export async function postCheckin(options, ctx) {
     content: mentionString,
     embeds: [embed],
   });
+}
+
+// Clean, focused embed for redeem: only new codes and/or problems.
+function buildRedeemEmbed(ctx, language, news, problems) {
+  const fields = [];
+
+  if (news.length) {
+    const lines = news.map(
+      (r) => `• \`${r.code}\`${r.reward ? ` — ${r.reward}` : ""}`
+    );
+    fields.push({
+      name: tr(language, "new_codes"),
+      value: clip(lines.join("\n")),
+      inline: false,
+    });
+  }
+
+  if (problems.length) {
+    const lines = problems.map((r) => {
+      const head = r.code ? `\`${r.code}\` — ` : "";
+      const body =
+        r.status === "cookie_expired"
+          ? tr(language, "cookie_hint")
+          : r.message || "error";
+      return `• ${head}${body}`;
+    });
+    fields.push({
+      name: tr(language, "problems"),
+      value: clip(lines.join("\n")),
+      inline: false,
+    });
+  }
+
+  const title =
+    news.length && problems.length
+      ? tr(language, "mixed_title")
+      : news.length
+        ? tr(language, "redeemed_title", { count: news.length })
+        : tr(language, "cookie_title");
+
+  const color = problems.length
+    ? news.length
+      ? 0xffa500 // orange: redeemed some, but something needs attention
+      : 0xff0000 // red: only problems
+    : 0x00ff00; // green: clean new redeems
+
+  return {
+    title: `${ctx.plugin_name ? `[${ctx.plugin_name}] ` : ""}${title}`,
+    color,
+    fields,
+    timestamp: new Date().toISOString(),
+  };
 }
 
 export async function onError(options, ctx) {
