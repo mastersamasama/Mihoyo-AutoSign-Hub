@@ -1,3 +1,4 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getConfig } from './config.js';
 import { ExecutionPipeline } from './core/pipeline.js';
 
@@ -22,10 +23,13 @@ async function run() {
   }
 }
 
-export default async (req: Request, res: Response) => {
+// Node-style handler: @vercel/node ignores a returned Response, so we MUST end the
+// response via res. A previous `return new Response()` never sent anything, which
+// made every invocation hang until the 60s function timeout (504).
+export default async (_req: VercelRequest, res: VercelResponse) => {
   await run();
   console.log('Execution completed');
-  return new Response('OK', { status: 200 });
+  res.status(200).send('OK');
 };
 
 if (process.env.NODE_ENV === 'development') {

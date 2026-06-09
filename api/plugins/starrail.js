@@ -14,6 +14,7 @@ const API_CONFIG = {
   DEFAULT_LANG: "en-us",
   MAX_RETRY: 1,
   RETRY_DELAY: 1000,
+  TIMEOUT_MS: 8000, // never leave a fetch un-timed on serverless — a hung connection kills the function
 };
 
 const generateHeaders = (cookies) => ({
@@ -39,13 +40,17 @@ const generatePayload = () => ({
 
 async function fetchWithRetry(url, options, retries = API_CONFIG.MAX_RETRY) {
   for (let i = 0; i < retries; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), API_CONFIG.TIMEOUT_MS);
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, { ...options, signal: ctrl.signal });
       if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
       return await response.json();
     } catch (error) {
       if (i === retries - 1) throw error;
       await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY * (i + 1)));
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

@@ -45,7 +45,11 @@ export const getConfig = (): GlobalConfig => ({
                 ],
                 lang: myLanguage,
                 maxPerRun: 6,
-                timeBudgetMs: 16000, // hard per-game cap so check-in + both redeems fit the 60s function
+                timeBudgetMs: 16000, // soft per-game cap on the redeem loop
+                // absolute per-invocation deadline shared by BOTH redeem plugins. Computed
+                // when getConfig() runs (once per request), so it is correct on warm lambdas.
+                // Redeem yields at this point so check-in + the whole function stay under 60s.
+                runDeadline: Date.now() + 35000,
                 kv: { url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN },
             }
         },
@@ -61,7 +65,11 @@ export const getConfig = (): GlobalConfig => ({
                 ],
                 lang: myLanguage,
                 maxPerRun: 6,
-                timeBudgetMs: 16000, // hard per-game cap so check-in + both redeems fit the 60s function
+                timeBudgetMs: 16000, // soft per-game cap on the redeem loop
+                // absolute per-invocation deadline shared by BOTH redeem plugins. Computed
+                // when getConfig() runs (once per request), so it is correct on warm lambdas.
+                // Redeem yields at this point so check-in + the whole function stay under 60s.
+                runDeadline: Date.now() + 35000,
                 kv: { url: process.env.KV_REST_API_URL, token: process.env.KV_REST_API_TOKEN },
             }
         }

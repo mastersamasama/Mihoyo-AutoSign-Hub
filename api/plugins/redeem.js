@@ -118,7 +118,7 @@ function pickCookie(raw, keys = REDEEM_COOKIE_KEYS) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ───────────── http ─────────────
-async function fetchJson(url, { method = "GET", headers = {}, body, timeoutMs = 10000 } = {}) {
+async function fetchJson(url, { method = "GET", headers = {}, body, timeoutMs = 7000 } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -200,9 +200,17 @@ const THROTTLE_MS = 5500;
 const COOLDOWN_MS = 6000;
 
 async function redeemForUser(game, user, config, store) {
-  // Hard wall-clock budget: the serverless function has a fixed timeout, so cap how
-  // long this game's redeem may run. Codes we don't reach are picked up next run.
-  const deadline = Date.now() + (config.timeBudgetMs ?? 16000);
+  // Two budgets bound the serverless run:
+  //  - runDeadline: absolute per-invocation wall shared by both redeem plugins, so the
+  //    whole function (check-in first, then both redeems) stays under the 60s timeout.
+  //  - timeBudgetMs: soft per-game cap on the redeem loop.
+  // If we're already out of time (check-in / the first game ran long), bail before any
+  // network work — those codes are retried next run (idempotent via -2017).
+  const runDeadline = config.runDeadline ?? Date.now() + 40000;
+  if (Date.now() >= runDeadline) {
+    return [{ status: "skipped", message: "run time budget exhausted" }];
+  }
+  const deadline = Math.min(Date.now() + (config.timeBudgetMs ?? 16000), runDeadline);
 
   const role = await getRole(game, user.cookies); // CookieError bubbles to checkin's catch
   if (role.level < game.arGate) {
