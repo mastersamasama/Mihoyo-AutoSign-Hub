@@ -68,6 +68,11 @@ const RETCODE = {
   "-2018": { done: true, already: true, label: "already" },
   "-2001": { done: true, permanent: true, label: "expired" },
   "-2003": { done: true, permanent: true, label: "invalid" },
+  // Observed live (2026-08-01): an unrecognised cdkey answers -1065 "Invalid
+  // redemption code", NOT the -2003 the spec assumed. Without this row it fell
+  // through to `unknown`/failed, so a permanently bad code was never recorded as
+  // settled and would be re-attempted on every run forever.
+  "-1065": { done: true, permanent: true, label: "invalid" },
   "-2016": { cooldown: true, label: "cooldown" },
   "-1004": { cooldown: true, label: "cooldown" },
   "-1071": { cookieDead: true, label: "cookie_expired" },
@@ -94,9 +99,18 @@ function mergeCodes(lists) {
     });
   }
   // vouched-active first so a limited per-run time budget is spent on likely-valid
-  // codes; then newest-first (undated treated as newest = "if no time then all sign").
+  // codes; then newest-first.
+  //
+  // Undated codes sort LAST, not first. They were once treated as "newest" so an
+  // undated code would always be attempted, but a per-run cap turns "first" into
+  // "steals the scarcest slot": an ennead-only code with no hashblen entry (i.e.
+  // old enough that hashblen never recorded it) was jumping ahead of the freshly
+  // announced version codes and starving them every run. A genuinely new code
+  // always carries an added_at, so undated == old. (`?? 0` also avoids
+  // Infinity - Infinity = NaN, which made the comparator non-deterministic
+  // whenever two codes were undated.)
   return [...out.values()].sort(
-    (a, b) => Number(b.vouched) - Number(a.vouched) || (b.added_at ?? Infinity) - (a.added_at ?? Infinity)
+    (a, b) => Number(b.vouched) - Number(a.vouched) || (b.added_at ?? 0) - (a.added_at ?? 0)
   );
 }
 
@@ -196,16 +210,49 @@ function makeStore(kv) {
 }
 
 // ───────────── orchestration ─────────────
+// Measured live (2026-08-01), not assumed: the redemption cooldown is 5s, counted
+// from the completion of the last ACCEPTED call — a throttled call does not reset
+// it. Sleeping 5.5s after each response therefore clears it with 0.5s of margin.
+// The window is per game account and independent across Genshin/Star Rail, which
+// is why the two redeem plugins may run concurrently (see GlobalConfig.concurrent).
 const THROTTLE_MS = 5500;
 const COOLDOWN_MS = 6000;
 
+// A -2016 response states the remaining wait outright ("Redemption in cooldown.
+// Please try again in 4 second(s)."). Waiting exactly that long beats guessing:
+// it neither under-waits into a second rejection nor burns budget over-waiting.
+function cooldownMsFrom(message) {
+  const m = /(\d+)\s*second/i.exec(String(message ?? ""));
+  return m ? Math.min(Number(m[1]) * 1000 + 800, 12000) : COOLDOWN_MS;
+}
+
+// One redeem round-trip, MEASURED end-to-end (2026-08-01), not estimated: ~2.6s.
+// It is not 0.7s of request time — the 5.5s spacing outlives the HTTP keep-alive,
+// so every call re-does the TLS handshake. An earlier 1.5s guess made
+// servableCount() over-promise by one code, which is exactly the un-spaced tail
+// this whole cap exists to prevent. Observed cadence: 8.1s per code.
+const CALL_MS = 2600;
+
+// How many codes a time budget can attempt *with the mandatory spacing between
+// them*. Attempting more does not redeem more: the un-spaced tail earns -2016
+// (too frequent), and the cooldown retry needs COOLDOWN_MS the budget no longer
+// has — so those codes are lost for the whole run rather than deferred to the
+// next one. Because the order is deterministic and (without KV) nothing is
+// recorded, the same codes lost the race every single day. Derive the cap from
+// the budget instead of trusting a configured maxPerRun that may exceed it.
+const servableCount = (ms) => Math.max(0, Math.floor((ms - CALL_MS) / (CALL_MS + THROTTLE_MS)) + 1);
+
+// A code this new is one we are actively racing to redeem (a version livestream
+// announces its batch all at once) — it must never yield its slot to backlog.
+const RECENT_MS = 72 * 3600_000;
+
 async function redeemForUser(game, user, config, store) {
   // Two budgets bound the serverless run:
-  //  - runDeadline: absolute per-invocation wall shared by both redeem plugins, so the
-  //    whole function (check-in first, then both redeems) stays under the 60s timeout.
-  //  - timeBudgetMs: soft per-game cap on the redeem loop.
-  // If we're already out of time (check-in / the first game ran long), bail before any
-  // network work — those codes are retried next run (idempotent via -2017).
+  //  - runDeadline: absolute per-invocation wall shared by both redeem plugins, so both
+  //    games together stay under the 60s function timeout.
+  //  - timeBudgetMs: per-game cap on the redeem loop; also sizes the per-run code cap.
+  // If we're already out of time (the first game ran long), bail before any network
+  // work — those codes are retried next run (idempotent via -2017).
   const runDeadline = config.runDeadline ?? Date.now() + 40000;
   if (Date.now() >= runDeadline) {
     return [{ status: "skipped", message: "run time budget exhausted" }];
@@ -227,7 +274,31 @@ async function redeemForUser(game, user, config, store) {
   }
   const keep = [];
   for (const c of todo) if (!(await store.has(key, c.code))) keep.push(c); // KV stub → keeps all (all-sign)
-  todo = keep.slice(0, config.maxPerRun ?? 8);
+
+  // Cap by BOTH the configured maximum and what the *remaining* budget can space
+  // out — fetchCodes + store.has already spent some of it, so measure now.
+  // dryRun does no network work, so it plans the whole configured list.
+  const cap = config.dryRun
+    ? (config.maxPerRun ?? 8)
+    : Math.min(config.maxPerRun ?? 8, servableCount(deadline - Date.now()));
+  todo = keep.slice(0, cap);
+  const deferred = keep.slice(cap); // reported below, retried next run
+
+  // Without a dedup store the ordering is byte-identical every run, so whatever
+  // falls past the cap is deferred *forever* — the same starvation as before,
+  // merely moved to the tail. Spend the last slot on a rotating pick from the
+  // overflow so the backlog is eventually covered, with no state to keep.
+  // Guarded by freshness: a code added within RECENT_MS is never displaced, so
+  // on a version-livestream day the newly announced codes keep every slot.
+  if (!config.dryRun && deferred.length && todo.length) {
+    const last = todo[todo.length - 1];
+    const lastIsFresh = last.added_at && Date.now() - last.added_at * 1000 <= RECENT_MS;
+    if (!lastIsFresh) {
+      const [pick] = deferred.splice(Math.floor(Date.now() / 86400_000) % deferred.length, 1);
+      deferred.push(todo.pop());
+      todo.push(pick);
+    }
+  }
 
   const out = [];
   for (let i = 0; i < todo.length; i++) {
@@ -240,16 +311,29 @@ async function redeemForUser(game, user, config, store) {
 
     let { retcode, message } = await redeemCode(game, role, user.cookies, c.code, config.lang);
     let v = classify(retcode);
-    if (v.cooldown && Date.now() + COOLDOWN_MS < deadline) {
-      await sleep(COOLDOWN_MS);
-      ({ retcode, message } = await redeemCode(game, role, user.cookies, c.code, config.lang));
-      v = classify(retcode);
+    if (v.cooldown) {
+      const wait = cooldownMsFrom(message);
+      if (Date.now() + wait < deadline) {
+        await sleep(wait);
+        ({ retcode, message } = await redeemCode(game, role, user.cookies, c.code, config.lang));
+        v = classify(retcode);
+      }
     }
     if (v.cookieDead) { out.push({ code: c.code, retcode, status: v.label, message }); break; }
     if (v.done) await store.add(key, c.code);
     out.push({ code: c.code, reward: c.reward, retcode, status: v.label, message });
     // throttle between codes, but never sleep past the budget or after the last code
     if (i < todo.length - 1 && Date.now() + THROTTLE_MS < deadline) await sleep(THROTTLE_MS);
+  }
+
+  // Report every code we did not get to (cap overflow, deadline break, cookie
+  // abort) instead of dropping it. A starved code used to vanish from the run
+  // entirely — the notification showed only what succeeded, so nobody could see
+  // that a version code had been skipped for days on end.
+  const attempted = new Set(out.map((r) => r.code));
+  for (const c of [...todo, ...deferred]) {
+    if (attempted.has(c.code)) continue;
+    out.push({ code: c.code, reward: c.reward, status: "skipped", message: "out of run budget — retried next run" });
   }
   return out;
 }
@@ -273,4 +357,4 @@ export const checkin = async (config = {}) => {
 };
 
 // exported for inline unit tests (api/redeem.test.mjs)
-export const __test = { normCode, isValidCode, mergeCodes, classify, pickCookie, fetchCodes, getRole, GAMES, SOURCES };
+export const __test = { normCode, isValidCode, mergeCodes, classify, pickCookie, servableCount, cooldownMsFrom, fetchCodes, getRole, GAMES, SOURCES };

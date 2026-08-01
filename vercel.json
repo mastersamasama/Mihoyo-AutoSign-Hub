@@ -14,6 +14,10 @@
   ],
   "routes": [
     {
+      "src": "/api/redeem",
+      "dest": "/api/redeem.ts"
+    },
+    {
       "src": "/(.*)",
       "dest": "/api/index.ts"
     }
@@ -22,6 +26,10 @@
     {
       "path": "/api/index",
       "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/redeem",
+      "schedule": "20 16 * * *"
     }
   ]
 }

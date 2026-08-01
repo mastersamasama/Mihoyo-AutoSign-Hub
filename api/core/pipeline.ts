@@ -69,42 +69,55 @@ export class ExecutionPipeline {
    * hooks, the plugin's checkin function, the post hooks, and the error hooks
    * if the plugin's checkin function throws an error.
    *
+   * Sequential by default; `globalConfig.concurrent` runs them all at once.
+   *
    * @returns {Promise<void>}
    */
   async execute() {
+    const runs = Array.from(this.plugins, ([name, plugin]) => () => this.executeOne(name, plugin));
 
-    for (const [pluginName, plugin] of this.plugins) {
-      // create a context object for the middleware in this plugin cycle
-      const mwContext = this.createMiddlewareBaseContext();
+    // Concurrent execution multiplies the wall-clock each plugin gets out of one
+    // invocation — the redeem plugins are throttle-bound, so running both games at
+    // once doubles how many codes a single run can reach. Opt-in per config: it is
+    // only correct when the plugins do not share a rate limit.
+    if (this.globalConfig.concurrent) {
+      await Promise.all(runs.map((r) => r()));
+      return;
+    }
+    for (const r of runs) await r();
+  }
 
-      try {
-        // execute pre hooks
-        await this.runPreHooks(pluginName, {
-          ...mwContext,
-          plugins_meta: mwContext.plugins_meta[pluginName] as any,
-          plugin_options: this.getPluginOptions(pluginName)
-        });
+  private async executeOne(pluginName: string, plugin: PluginModule) {
+    // create a context object for the middleware in this plugin cycle
+    const mwContext = this.createMiddlewareBaseContext();
 
-        // execute the plugin's checkin function
-        const result = await plugin.checkin(this.getPluginOptions(pluginName));
+    try {
+      // execute pre hooks
+      await this.runPreHooks(pluginName, {
+        ...mwContext,
+        plugins_meta: mwContext.plugins_meta[pluginName] as any,
+        plugin_options: this.getPluginOptions(pluginName)
+      });
 
-        // execute post hooks
-        await this.runPostHooks(pluginName, {
-          ...mwContext,
-          plugins_meta: mwContext.plugins_meta[pluginName] as any,
-          plugin_name: pluginName,
-          result
-        });
-      } catch (error) {
-        // execute error hooks
-        await this.runErrorHooks(pluginName, {
-          ...mwContext,
-          plugins_meta: mwContext.plugins_meta[pluginName] as any,
-          plugin_name: pluginName,
-          error: error as Error
-        });
-        console.log(`Plugin[${pluginName}] execute error:`, error);
-      }
+      // execute the plugin's checkin function
+      const result = await plugin.checkin(this.getPluginOptions(pluginName));
+
+      // execute post hooks
+      await this.runPostHooks(pluginName, {
+        ...mwContext,
+        plugins_meta: mwContext.plugins_meta[pluginName] as any,
+        plugin_name: pluginName,
+        result
+      });
+    } catch (error) {
+      // execute error hooks
+      await this.runErrorHooks(pluginName, {
+        ...mwContext,
+        plugins_meta: mwContext.plugins_meta[pluginName] as any,
+        plugin_name: pluginName,
+        error: error as Error
+      });
+      console.log(`Plugin[${pluginName}] execute error:`, error);
     }
   }
 

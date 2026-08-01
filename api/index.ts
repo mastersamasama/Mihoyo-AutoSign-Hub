@@ -2,10 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getConfig } from './config.js';
 import { ExecutionPipeline } from './core/pipeline.js';
 
-// Hobby plan caps maxDuration at 60s. Check-in runs first (fast); the redeem
-// plugins each carry a hard wall-clock time budget (config.timeBudgetMs) so the
-// whole invocation stays comfortably under this ceiling. Unreached codes are
-// retried on the next daily run (idempotent — HoYoLAB returns -2017 if already used).
+// Check-in only. Redeem moved to its own cron/function (api/redeem.ts): sharing
+// one 60s invocation left the redeem loop ~16s, which at the measured 8.1s per
+// code can attempt just 2 — the rest were fired un-throttled, earned -2016, and
+// were dropped on every single run.
 export const config = { maxDuration: 60 };
 
 const isLocal = process.env.VERCEL_ENV !== 'production';
@@ -13,7 +13,7 @@ const isLocal = process.env.VERCEL_ENV !== 'production';
 async function run() {
   try {
     console.log(`Initializing in ${isLocal ? 'local' : 'cloud'} mode...`);
-    const config = getConfig();
+    const config = getConfig('checkin');
     const pipeline = new ExecutionPipeline(config);
     await pipeline.initialize();
     await pipeline.execute();

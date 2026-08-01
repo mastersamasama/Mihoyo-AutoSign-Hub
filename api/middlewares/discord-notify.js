@@ -151,6 +151,8 @@ const REDEEM_I18N = {
     cookie_hint: "Cookie expired — refresh the redeem cookie",
     uptodate_title: "✅ No new codes",
     error_title: "⚠️ Temporarily unavailable (will retry next run)",
+    unfinished: "⏳ Not Redeemed Yet (retries next run)",
+    pending_title: "⏳ ${count} Code(s) Left For The Next Run",
   },
   "zh-cn": {
     new_codes: "🎁 新兑换码",
@@ -161,6 +163,8 @@ const REDEEM_I18N = {
     cookie_hint: "Cookie 已失效 — 请刷新兑换 Cookie",
     uptodate_title: "✅ 暂无新兑换码",
     error_title: "⚠️ 暂时无法兑换（下次自动重试）",
+    unfinished: "⏳ 尚未兑换（下次自动重试）",
+    pending_title: "⏳ 还有 ${count} 个兑换码留待下次执行",
   },
   "zh-tw": {
     new_codes: "🎁 新兌換碼",
@@ -171,6 +175,8 @@ const REDEEM_I18N = {
     cookie_hint: "Cookie 已失效 — 請刷新兌換 Cookie",
     uptodate_title: "✅ 暫無新兌換碼",
     error_title: "⚠️ 暫時無法兌換（下次自動重試）",
+    unfinished: "⏳ 尚未兌換（下次自動重試）",
+    pending_title: "⏳ 還有 ${count} 個兌換碼留待下次執行",
   },
   ja: {
     new_codes: "🎁 新しいコード",
@@ -181,6 +187,8 @@ const REDEEM_I18N = {
     cookie_hint: "Cookie の期限切れ — 引き換え Cookie を更新してください",
     uptodate_title: "✅ 新しいコードなし",
     error_title: "⚠️ 一時的に利用不可（次回再試行）",
+    unfinished: "⏳ 未引き換え（次回再試行）",
+    pending_title: "⏳ ${count} 件が次回に持ち越し",
   },
   ko: {
     new_codes: "🎁 새 코드",
@@ -191,6 +199,8 @@ const REDEEM_I18N = {
     cookie_hint: "쿠키 만료 — 교환 쿠키를 갱신하세요",
     uptodate_title: "✅ 새 코드 없음",
     error_title: "⚠️ 일시적으로 사용 불가 (다음에 재시도)",
+    unfinished: "⏳ 미사용 (다음 실행에서 재시도)",
+    pending_title: "⏳ ${count}개가 다음 실행으로 이월",
   },
 };
 
@@ -206,6 +216,14 @@ const REDEEM_NEW = (r) => r?.retcode === 0 || r?.status === "redeemed";
 // (e.g. a rate-limited role lookup) is shown as a thin neutral note, never a ping.
 const REDEEM_PROBLEM = (r) => r?.status === "cookie_expired";
 const REDEEM_ERROR = (r) => r?.status === "error";
+// A code that reached a settled verdict — nothing to report, it is done with.
+const REDEEM_SETTLED = new Set(["redeemed", "already", "expired", "invalid"]);
+// A code that neither landed nor settled: rate-limited (`cooldown`), an unknown
+// retcode (`failed`), or never attempted (`skipped`). These used to be filtered
+// out entirely, so a code starved by the run budget vanished from the report and
+// the run looked clean while a version code went unredeemed for days. Transient
+// by nature, so shown for visibility but never worth an @mention.
+const REDEEM_UNFINISHED = (r) => !!r?.code && !REDEEM_SETTLED.has(r.status);
 
 function clip(value, max = 1000) {
   if (!value) return "—";
@@ -243,11 +261,14 @@ export async function postCheckin(options, ctx) {
     const news = results.filter(REDEEM_NEW);
     const problems = results.filter(REDEEM_PROBLEM);
     const errored = results.some(REDEEM_ERROR);
+    // `problems` already covers cookie_expired — don't list those twice.
+    const unfinished = results.filter((r) => REDEEM_UNFINISHED(r) && !REDEEM_PROBLEM(r));
 
     // Always notify, but stay thin: a single line when nothing happened (or a
-    // transient error), a fuller embed only when there are new codes or a real
-    // cookie problem. Only cookie problems @mention.
-    const embed = buildRedeemEmbed(ctx, language, news, problems, errored);
+    // transient error), a fuller embed only when there are new codes, a real
+    // cookie problem, or codes that did not get redeemed. Only cookie problems
+    // @mention.
+    const embed = buildRedeemEmbed(ctx, language, news, problems, errored, unfinished);
     const mention = problems.length > 0 ? buildMentionString(mentionUsers) : "";
     await sendNotification(webhook, { content: mention, embeds: [embed] });
     return;
@@ -273,12 +294,12 @@ export async function postCheckin(options, ctx) {
 }
 
 // Clean, focused embed for redeem: only new codes and/or problems.
-function buildRedeemEmbed(ctx, language, news, problems, errored = false) {
+function buildRedeemEmbed(ctx, language, news, problems, errored = false, unfinished = []) {
   const prefix = ctx.plugin_name ? `[${ctx.plugin_name}] ` : "";
 
   // nothing new and nothing wrong → thin one-line embed (title only).
   // a transient error gets a neutral "temporarily unavailable" note, no @mention.
-  if (!news.length && !problems.length) {
+  if (!news.length && !problems.length && !unfinished.length) {
     return {
       title: `${prefix}${tr(language, errored ? "error_title" : "uptodate_title")}`,
       color: errored ? 0xf1c40f : 0x2ecc71,
@@ -315,18 +336,33 @@ function buildRedeemEmbed(ctx, language, news, problems, errored = false) {
     });
   }
 
+  if (unfinished.length) {
+    const lines = unfinished.map(
+      (r) => `• \`${r.code}\`${r.reward ? ` — ${r.reward}` : ""} (${r.status})`
+    );
+    fields.push({
+      name: tr(language, "unfinished"),
+      value: clip(lines.join("\n")),
+      inline: false,
+    });
+  }
+
   const title =
-    news.length && problems.length
+    news.length && (problems.length || unfinished.length)
       ? tr(language, "mixed_title")
       : news.length
         ? tr(language, "redeemed_title", { count: news.length })
-        : tr(language, "cookie_title");
+        : problems.length
+          ? tr(language, "cookie_title")
+          : tr(language, "pending_title", { count: unfinished.length });
 
   const color = problems.length
     ? news.length
       ? 0xffa500 // orange: redeemed some, but something needs attention
       : 0xff0000 // red: only problems
-    : 0x00ff00; // green: clean new redeems
+    : unfinished.length
+      ? 0xf1c40f // yellow: codes left over — informational, no @mention
+      : 0x00ff00; // green: clean new redeems
 
   return {
     title: `${ctx.plugin_name ? `[${ctx.plugin_name}] ` : ""}${title}`,
