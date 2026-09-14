@@ -218,6 +218,8 @@ const REDEEM_PROBLEM = (r) => r?.status === "cookie_expired";
 const REDEEM_ERROR = (r) => r?.status === "error";
 // A code that reached a settled verdict — nothing to report, it is done with.
 const REDEEM_SETTLED = new Set(["redeemed", "already", "expired", "invalid"]);
+// The redeem plugin appends one non-code item carrying the run's arithmetic.
+const REDEEM_SUMMARY = (r) => r?.status === "summary";
 // A code that neither landed nor settled: rate-limited (`cooldown`), an unknown
 // retcode (`failed`), or never attempted (`skipped`). These used to be filtered
 // out entirely, so a code starved by the run budget vanished from the report and
@@ -268,7 +270,7 @@ export async function postCheckin(options, ctx) {
     // transient error), a fuller embed only when there are new codes, a real
     // cookie problem, or codes that did not get redeemed. Only cookie problems
     // @mention.
-    const embed = buildRedeemEmbed(ctx, language, news, problems, errored, unfinished);
+    const embed = buildRedeemEmbed(ctx, language, news, problems, errored, unfinished, results.find(REDEEM_SUMMARY));
     const mention = problems.length > 0 ? buildMentionString(mentionUsers) : "";
     await sendNotification(webhook, { content: mention, embeds: [embed] });
     return;
@@ -294,8 +296,30 @@ export async function postCheckin(options, ctx) {
 }
 
 // Clean, focused embed for redeem: only new codes and/or problems.
-function buildRedeemEmbed(ctx, language, news, problems, errored = false, unfinished = []) {
+// The run's arithmetic in one line: how many codes the sources offered, how many
+// slots the time budget allowed, what happened to the rest. Vercel Hobby drops
+// runtime logs within the hour, so this footer is the only durable record of why
+// a code went unredeemed — reconstructing it afterwards meant re-querying the
+// code sources by hand (see the 2026-09-12 starvation).
+function summaryFooter(summary) {
+  const st = summary?.stats;
+  if (!st) return undefined;
+  const parts = [
+    `${st.fetched} codes`,
+    st.queued !== st.fetched ? `${st.queued} queued` : null,
+    `cap ${st.cap}`,
+    `${st.attempted} tried`,
+    `${st.redeemed} new`,
+    st.skipped ? `${st.skipped} left` : null,
+    `${(st.elapsedMs / 1000).toFixed(1)}s`,
+    st.store === "stateless" ? "no-dedup" : "kv",
+  ].filter(Boolean);
+  return { text: parts.join(" · ") };
+}
+
+function buildRedeemEmbed(ctx, language, news, problems, errored = false, unfinished = [], summary) {
   const prefix = ctx.plugin_name ? `[${ctx.plugin_name}] ` : "";
+  const footer = summaryFooter(summary);
 
   // nothing new and nothing wrong → thin one-line embed (title only).
   // a transient error gets a neutral "temporarily unavailable" note, no @mention.
@@ -303,6 +327,7 @@ function buildRedeemEmbed(ctx, language, news, problems, errored = false, unfini
     return {
       title: `${prefix}${tr(language, errored ? "error_title" : "uptodate_title")}`,
       color: errored ? 0xf1c40f : 0x2ecc71,
+      footer,
       timestamp: new Date().toISOString(),
     };
   }
@@ -337,8 +362,10 @@ function buildRedeemEmbed(ctx, language, news, problems, errored = false, unfini
   }
 
   if (unfinished.length) {
+    // `reason` names the wall that stopped it (cap / deadline / aborted). Without
+    // it "skipped" could not be told apart from a slow run.
     const lines = unfinished.map(
-      (r) => `• \`${r.code}\`${r.reward ? ` — ${r.reward}` : ""} (${r.status})`
+      (r) => `• \`${r.code}\`${r.reward ? ` — ${r.reward}` : ""} (${r.reason || r.status})`
     );
     fields.push({
       name: tr(language, "unfinished"),
@@ -368,6 +395,7 @@ function buildRedeemEmbed(ctx, language, news, problems, errored = false, unfini
     title: `${ctx.plugin_name ? `[${ctx.plugin_name}] ` : ""}${title}`,
     color,
     fields,
+    footer,
     timestamp: new Date().toISOString(),
   };
 }
